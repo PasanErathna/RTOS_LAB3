@@ -1,0 +1,40 @@
+#if CONFIG_FREERTOS_UNICORE
+static const BaseType_t app_cpu =0;
+#else
+static const Base_Type_t app_cpu =1;
+#endif
+
+
+static const int LED_PIN = 2;
+
+
+void blinkLED (void*parameter){              
+  while(1){
+    digitalWrite(LED_PIN ,HIGH);
+    vTaskDelay(500/portTICK_PERIOD_MS);    
+    digitalWrite(LED_PIN,LOW);
+    vTaskDelay(500/portTICK_PERIOD_MS);
+  }
+}
+    
+void setup() {
+ 
+    pinMode (LED_PIN , OUTPUT);
+
+
+    xTaskCreatePinnedToCore(
+    blinkLED,                           
+   "blinkLED",                          
+   1024,                               
+   NULL,                              
+   1,                                
+   NULL,                              
+   app_cpu)                           
+    
+
+}
+
+void loop() {
+ 
+
+}
