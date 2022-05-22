@@ -1,0 +1,104 @@
+// Needed for atoi()
+#include <stdlib.h>
+#if CONFIG_FREERTOS_UNICORE
+  static const BaseType_t app_cpu = 0;
+#else
+  static const BaseType_t app_cpu = 1;
+#endif
+
+
+static const uint8_t buf_len = 20;
+
+//Configure Pins
+static const int LED_PIN = 2;
+
+// Global variable 
+static int LED_DELAY = 500;   // ms
+
+
+
+// Task: Blink LED 
+void blinkLED(void *parameter) {
+  while (1) {
+    digitalWrite(LED_PIN, HIGH);
+    vTaskDelay(LED_DELAY/ portTICK_PERIOD_MS);
+    digitalWrite(LED_PIN, LOW);
+    vTaskDelay(LED_DELAY / portTICK_PERIOD_MS);
+  }
+}
+
+// Task: Read from serial terminal
+
+void readSerial(void *parameters) {
+
+  char c;
+  char buf[buf_len];
+  uint8_t idx = 0;
+
+  // Clear whole buffer
+  memset(buf, 0, buf_len);
+
+  
+  while (1) {
+
+    // Read characters from serial
+    if (Serial.available() > 0) {
+      c = Serial.read();
+
+      // Update delay variable and reset buffer if we get a newline character
+      if (c == '\n') {
+        LED_DELAY = atoi(buf);
+        Serial.print("Updated LED delay to: ");
+        Serial.println(LED_DELAY);
+        memset(buf, 0, buf_len);
+        idx = 0;
+      } else {
+        
+        // Only append if index is not over message limit
+        if (idx < buf_len - 1) {
+          buf[idx] = c;
+          idx  ;
+        }
+      }
+    }
+  }
+}
+
+
+void setup() {
+
+  // Configure pin
+  pinMode(LED_PIN, OUTPUT);
+
+  // Configure serial and wait a second
+  Serial.begin(115200);
+  vTaskDelay(1000 / portTICK_PERIOD_MS);
+  Serial.println("Enter a number in milliseconds to change the LED delay.");
+
+  // Start blink task
+  xTaskCreatePinnedToCore(  
+            blinkLED,      
+            "Blink LED",   
+            1024,            
+            NULL,           
+            1,              
+            NULL,           
+            app_cpu);      
+            
+  // Start serial read task
+  xTaskCreatePinnedToCore(  
+            readSerial,     
+            "Read Serial",  
+            1024,           
+            NULL,          
+            1,              
+            NULL,          
+            app_cpu);       
+
+  // Delete "setup and loop" task
+  vTaskDelete(NULL);
+}
+
+void loop() {
+  
+}
